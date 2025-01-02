@@ -4,32 +4,30 @@
 -- 3. Null values or blank values
 -- 4. Remove any columns or rows
 
+select * from layoffs;
+
+# Create a duplicate table from layoffs (raw date) -- layoffs_statging
 CREATE TABLE layoffs_staging
 LIKE layoffs;
--- select * from layoffs_staging;
-
 INSERT layoffs_staging
 
-SELECT * ,
-ROW_NUMBER() OVER(
-PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
-from layoffs_staging;
+-- select * from layoffs_staging;
 
+-- Create a Common Table Expression (CTE) to identify duplicate rows;  Select rows where row_num > 1, indicating duplicates
 WITH duplicate_cte AS
 (
 SELECT * ,
 ROW_NUMBER() OVER(
-PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
+PARTITION BY company, location, 
+industry, total_laid_off, percentage_laid_off, `date`, stage, 
+country, funds_raised_millions) AS row_num
 from layoffs_staging
 )
-select *
-from duplicate_cte
-where row_num > 1;
+SELECT *
+FROM duplicate_cte
+WHERE row_num > 1;
 
-select *
-from layoffs_staging
-where company = 'Casper';
-
+-- Create an empty table - layoffs_staging2
 CREATE TABLE `layoffs_staging2` (
   `company` text,
   `location` text,
@@ -43,19 +41,21 @@ CREATE TABLE `layoffs_staging2` (
   `row_num` INT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-select *
-from layoffs_staging2;
+-- select * from layoffs_staging2;
 
+-- Insert data into the new table with row numbers
 INSERT INTO layoffs_staging2
 SELECT * ,
 ROW_NUMBER() OVER(
-PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, 
+PARTITION BY company, location, industry, 
+total_laid_off, percentage_laid_off, 
 `date`, stage, country, funds_raised_millions) AS row_num
-from layoffs_staging;
+FROM layoffs_staging;
 
+# Delete the duplicate rows from the new table
 DELETE FROM
 layoffs_staging2
-where row_num > 1;
+WHERE row_num > 1; -- This removes duplicate rows identified by row_num > 1 from the layoffs_staging2 table
 
 -- select * from layoffs_staging2;
 
