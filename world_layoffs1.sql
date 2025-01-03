@@ -6,10 +6,12 @@
 
 -- 1. Remove duplicates
 
-# Create a duplicate table from layoffs (raw date) -- layoffs_statging
+# Create a duplicate table from layoffs (raw data) -- layoffs_statging
 CREATE TABLE layoffs_staging
 LIKE layoffs;
 INSERT layoffs_staging
+SELECT *
+FROM layoffs;
 
 -- select * from layoffs_staging;
 
@@ -59,6 +61,7 @@ WHERE row_num > 1; -- This removes duplicate rows identified by row_num > 1 from
 
 -- select * from layoffs_staging2;
 
+-----------------------------------------------------------------------------------------------------------------------------------
 -- 2. Standadize data (finding issues in the data and fix it)
 
 -- COMPANY
@@ -103,30 +106,63 @@ MODIFY COLUMN `date` DATE; -- This alters the `date` column to enforce a DATE da
 SELECT `date`
 FROM layoffs_staging2;
 
--- 3. Evaluate NULL values
+-- industry
+-- Check if there is any null/empty rows in the industry column
+SELECT DISTINCT industry
+FROM layoffs_staging2
+ORDER BY industry;
+
+-- Fetches rows where industry is NULL or empty, sorted by industry
+SELECT *
+FROM layoffs_staging2
+WHERE industry IS NULL 
+OR industry = ''
+ORDER BY industry;
+
+SELECT *
+FROM layoffs_staging2
+WHERE company LIKE 'Bally%';
+SELECT *
+FROM layoffs_staging2
+WHERE company LIKE 'airbnb%';
+
+-- Replaces empty industry values with NULL
+UPDATE layoffs_staging2
+SET industry = NULL
+WHERE industry = '';
+ 
+-- Finds rows with industry as NULL or empty, sorted by industry
+SELECT *
+FROM layoffs_staging2
+WHERE industry IS NULL 
+OR industry = ''
+ORDER BY industry;
+
+-- Fills NULL industry values in t1 using matching industry values from t2 based on the same company
+UPDATE layoffs_staging2 t1
+JOIN layoffs_staging2 t2
+ON t1.company = t2.company
+SET t1.industry = t2.industry
+WHERE t1.industry IS NULL
+AND t2.industry IS NOT NULL;
+
+-- Fetches rows where industry is NULL or empty, sorted by industry
+SELECT *
+FROM layoffs_staging2
+WHERE industry IS NULL 
+OR industry = ''
+ORDER BY industry;
+
+select * from layoffs_staging2 where company = 'Airbnb';
+
+-----------------------------------------------------------------------------------------------------------------------------------
+-- 3. Evaluate NULL values or blank values
 -- The NULL values in total_laid_off, percentage_laid_off, and funds_raised_millions appear valid.
 -- Keeping them as NULL is preferred since it simplifies calculations during the EDA phase.
 -- Therefore, no changes are needed for these NULL values.
 
-
+-----------------------------------------------------------------------------------------------------------------------------------
 -- 4. Remove any columns and rows as needed
-
--- Retrieves rows where industry is missing or empty in t1 but non-null in t2 for the same company and location
--- SELECT * 
--- FROM layoffs_staging2 t1
--- JOIN layoffs_staging2 t2
--- ON t1.company = t2.company
--- AND t1.location = t2.location
--- WHERE (t1.industry IS NULL OR t1.industry = '')
--- AND t2.industry IS NOT NULL;
-
-
--- Updates industry in t1 with the value from t2 where industry is missing (NULL) in t1 and non-null in t2 for matching company
--- UPDATE layoffs_staging2 t1
--- JOIN layoffs_staging2 t2
--- ON t1.company = t2.company
--- SET t1.industry = t2.industry
--- WHERE t1.industry IS NULL AND t2.industry IS NOT NULL;
 
 -- Retrieves rows from layoffs_staging2 where both total_laid_off and percentage_laid_off are NULL
 SELECT *
