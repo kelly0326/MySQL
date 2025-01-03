@@ -4,7 +4,7 @@
 -- 3. Null values or blank values
 -- 4. Remove any columns or rows
 
-select * from layoffs;
+-- 1. Remove duplicates
 
 # Create a duplicate table from layoffs (raw date) -- layoffs_statging
 CREATE TABLE layoffs_staging
@@ -59,67 +59,96 @@ WHERE row_num > 1; -- This removes duplicate rows identified by row_num > 1 from
 
 -- select * from layoffs_staging2;
 
--- Standadizing data (finding issues in the data and fix it)
-select company, TRIM(company)
-from layoffs_staging2;
+-- 2. Standadize data (finding issues in the data and fix it)
 
+-- COMPANY
+SELECT company, TRIM(company)
+FROM layoffs_staging2;
+
+-- Clean whitespace from the 'company' column
 UPDATE layoffs_staging2
-SET company = TRIM(company);
+SET company = TRIM(company); -- TRIM() removes any leading or trailing whitespace from the 'company' column to ensure data consistency
 
-select distinct industry
-from layoffs_staging2;
-
+-- INDUSTRY
+-- Standardize industry names starting with 'Crypto'
 UPDATE layoffs_staging2
 SET industry = 'Crypto'
-WHERE industry LIKE 'Crypto%';
+WHERE industry LIKE 'Crypto%'; -- This query standardizes all industry values starting with 'Crypto' to ensure consistency in naming
 
+-- Verify cleaned 'industry' values
+SELECT DISTINCT industry
+FROM layoffs_staging2;
 
-select distinct country, trim(trailing '.' from country)
-from layoffs_staging2
-where country like 'United States%';
-
+-- COUNTRY
+-- Clean trailing periods from 'country' column for 'United States'
 UPDATE layoffs_staging2
 SET country = TRIM(TRAILING '.' FROM country)
+WHERE country LIKE 'United States%'; -- This query removes any trailing periods from 'country' values that start with 'United States' to ensure consistency.
+
+-- Verify cleaned 'country' values
+SELECT DISTINCT country, trim(TRAILING '.' FROM country)
+FROM layoffs_staging2
 WHERE country LIKE 'United States%';
 
--- SELECT DISTINCT `date`
--- FROM layoffs_staging2;
+-- DATE
+-- Standardize date format
+UPDATE layoffs_staging2
+SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
 
--- UPDATE layoffs_staging2
--- SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
+-- Modify the `date` column type
+ALTER TABLE layoffs_staging2
+MODIFY COLUMN `date` DATE; -- This alters the `date` column to enforce a DATE data type
 
--- ALTER TABLE layoffs_staging2
--- MODIFY COLUMN `date` DATE;
+-- Verify updated `date` column
+SELECT `date`
+FROM layoffs_staging2;
 
-select * 
-from layoffs_staging2 t1
-join layoffs_staging2 t2
-on t1.company = t2.company
-and t1.location = t2.location
-where (t1.industry is null or t1.industry = '')
-and t2.industry is not null;
+-- 3. Evaluate NULL values
+-- The NULL values in total_laid_off, percentage_laid_off, and funds_raised_millions appear valid.
+-- Keeping them as NULL is preferred since it simplifies calculations during the EDA phase.
+-- Therefore, no changes are needed for these NULL values.
 
+
+-- 4. Remove any columns and rows as needed
+
+-- Retrieves rows where industry is missing or empty in t1 but non-null in t2 for the same company and location
+-- SELECT * 
+-- FROM layoffs_staging2 t1
+-- JOIN layoffs_staging2 t2
+-- ON t1.company = t2.company
+-- AND t1.location = t2.location
+-- WHERE (t1.industry IS NULL OR t1.industry = '')
+-- AND t2.industry IS NOT NULL;
+
+
+-- Updates industry in t1 with the value from t2 where industry is missing (NULL) in t1 and non-null in t2 for matching company
 -- UPDATE layoffs_staging2 t1
 -- JOIN layoffs_staging2 t2
 -- ON t1.company = t2.company
--- WHERE t1.industry is null
--- AND t2.industry is not null;
+-- SET t1.industry = t2.industry
+-- WHERE t1.industry IS NULL AND t2.industry IS NOT NULL;
 
-UPDATE layoffs_staging2 t1
-JOIN layoffs_staging2 t2
-ON t1.company = t2.company
-SET t1.industry = t2.industry
-WHERE t1.industry IS NULL AND t2.industry IS NOT NULL;
+-- Retrieves rows from layoffs_staging2 where both total_laid_off and percentage_laid_off are NULL
+SELECT *
+FROM layoffs_staging2
+WHERE total_laid_off IS NULL
+AND percentage_laid_off IS NULL;
 
--- cannot trust those data below
-Delete 
-from layoffs_staging2
-where total_laid_off is null
-and percentage_laid_off is null;
+-- Updates the industry column to NULL where its current value is an empty string
+UPDATE layoffs_staging2
+SET industry = NULL
+WHERE industry = '';
+
+-- Delete useless data
+DELETE 
+FROM layoffs_staging2
+WHERE total_laid_off is null
+AND percentage_laid_off is null;
 
 ALTER TABLE layoffs_staging2
 DROP COLUMN row_num;
 
-select * from layoffs_staging2;
+-- Check the final data table after cleaning completed
+SELECT * FROM layoffs_staging2;
 
 
