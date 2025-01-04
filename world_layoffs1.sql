@@ -5,15 +5,17 @@
 -- 4. Remove any columns or rows
 
 -- 1. Remove duplicates
+select * from layoffs;
 
 # Create a duplicate table from layoffs (raw data) -- layoffs_statging
 CREATE TABLE layoffs_staging
 LIKE layoffs;
+
 INSERT layoffs_staging
 SELECT *
 FROM layoffs;
 
--- select * from layoffs_staging;
+select * from layoffs_staging;
 
 -- Create a Common Table Expression (CTE) to identify duplicate rows;  Select rows where row_num > 1, indicating duplicates
 WITH duplicate_cte AS
@@ -59,7 +61,7 @@ DELETE FROM
 layoffs_staging2
 WHERE row_num > 1; -- This removes duplicate rows identified by row_num > 1 from the layoffs_staging2 table
 
--- select * from layoffs_staging2;
+select * from layoffs_staging2;
 
 -----------------------------------------------------------------------------------------------------------------------------------
 -- 2. Standadize data (finding issues in the data and fix it)
@@ -122,6 +124,7 @@ ORDER BY industry;
 SELECT *
 FROM layoffs_staging2
 WHERE company LIKE 'Bally%';
+
 SELECT *
 FROM layoffs_staging2
 WHERE company LIKE 'airbnb%';
