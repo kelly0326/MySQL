@@ -236,14 +236,31 @@ FROM layoffs_staging2
 GROUP BY stage
 ORDER BY 2 DESC;
 
--- Displays the total number of laidoffs per month
+-- Retrive the companies with 100% laid off rate
+With highest_percentage AS
+(
+SELECT company, industry, country, percentage_laid_off, percentage_laid_off * 100 as '%'
+FROM layoffs_staging2
+Where percentage_laid_off is not null
+ORDER BY 4 DESC
+)
+SELECT *
+FROM highest_percentage
+Where percentage_laid_off = 1;
+
+-- Calculates monthly layoffs and a cumulative (rolling) total over time, ordered chronologically by month
+WITH Rolling_Total AS
+(
 SELECT SUBSTRING(`date`,1,7) AS `MONTH`, SUM(total_laid_off) AS total_off
 FROM layoffs_staging2
 WHERE SUBSTRING(`date`,1,7) IS NOT NULL
 GROUP BY `MONTH`
-ORDER BY 1 ASC;
-
-
+ORDER BY 1 ASC
+)
+SELECT `MONTH`, total_off,
+SUM(total_off) OVER(ORDER BY `MONTH`) AS rolling_total
+FROM Rolling_Total;
+  
 -- Ranks companies by total layoffs per year and retrieves the top 3 for each year, ordered chronologically and by layoffs
 WITH Company_Year AS 
 (
@@ -251,8 +268,11 @@ WITH Company_Year AS
   FROM layoffs_staging2
   GROUP BY company, YEAR(date)
 )
-, Company_Year_Rank AS (
-  SELECT company, years, total_laid_off, DENSE_RANK() OVER (PARTITION BY years ORDER BY total_laid_off DESC) AS ranking
+, 
+Company_Year_Rank AS 
+(
+  SELECT company, years, total_laid_off, 
+  DENSE_RANK() OVER (PARTITION BY years ORDER BY total_laid_off DESC) AS ranking
   FROM Company_Year
 )
 SELECT company, years, total_laid_off, ranking
@@ -260,4 +280,8 @@ FROM Company_Year_Rank
 WHERE ranking <= 3
 AND years IS NOT NULL
 ORDER BY years ASC, total_laid_off DESC;
+
+-- SELECT * FROM layoffs_staging2;
+
+
 
