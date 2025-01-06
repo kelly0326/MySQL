@@ -1,4 +1,6 @@
--- World Layoffs Project - Data Cleaning
+-- World Layoffs Project
+
+-- Data Cleaning
 -- 1. Remove duplicates
 -- 2. Standardize the data
 -- 3. Null values or blank values
@@ -190,4 +192,72 @@ DROP COLUMN row_num;
 -- Check the final data table after cleaning completed
 SELECT * FROM layoffs_staging2;
 
+
+-----------------------------------------------------------------------------------------------------------------------------------
+-- Exploratory Data Analysis (EDA)
+
+-- Retrieve all columns from companies where 100% of employees were laid off
+SELECT *
+FROM layoffs_staging2
+WHERE percentage_laid_off = 1
+ORDER BY funds_raised_millions DESC;
+
+-- Displays the total number of layoffs per company, sorted by the highest total layoffs
+SELECT company, SUM(total_laid_off)
+FROM layoffs_staging2
+GROUP BY company
+ORDER BY 2 DESC;
+
+-- Retrieves the earliest and latest dates from the date column in the dataset
+SELECT MIN(`date`), MAX(`date`)
+FROM layoffs_staging2;
+
+-- Displays the total number of layoffs per industry
+SELECT industry, SUM(total_laid_off)
+FROM layoffs_staging2
+GROUP BY industry
+ORDER BY 2 DESC;
+
+-- Displays the total number of layoffs by countries
+SELECT country, SUM(total_laid_off)
+FROM layoffs_staging2
+GROUP BY country
+ORDER BY 2 DESC;
+
+-- Displays the total number of layoffs by years
+SELECT YEAR(`date`), SUM(total_laid_off)
+FROM layoffs_staging2
+GROUP BY YEAR(`date`)
+ORDER BY 1 DESC;
+
+-- Displays the total number of layoffs by stage
+SELECT stage, SUM(total_laid_off)
+FROM layoffs_staging2
+GROUP BY stage
+ORDER BY 2 DESC;
+
+-- Displays the total number of laidoffs per month
+SELECT SUBSTRING(`date`,1,7) AS `MONTH`, SUM(total_laid_off) AS total_off
+FROM layoffs_staging2
+WHERE SUBSTRING(`date`,1,7) IS NOT NULL
+GROUP BY `MONTH`
+ORDER BY 1 ASC;
+
+
+-- Ranks companies by total layoffs per year and retrieves the top 3 for each year, ordered chronologically and by layoffs
+WITH Company_Year AS 
+(
+  SELECT company, YEAR(date) AS years, SUM(total_laid_off) AS total_laid_off
+  FROM layoffs_staging2
+  GROUP BY company, YEAR(date)
+)
+, Company_Year_Rank AS (
+  SELECT company, years, total_laid_off, DENSE_RANK() OVER (PARTITION BY years ORDER BY total_laid_off DESC) AS ranking
+  FROM Company_Year
+)
+SELECT company, years, total_laid_off, ranking
+FROM Company_Year_Rank
+WHERE ranking <= 3
+AND years IS NOT NULL
+ORDER BY years ASC, total_laid_off DESC;
 
