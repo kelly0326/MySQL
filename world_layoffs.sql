@@ -239,10 +239,10 @@ ORDER BY 2 DESC;
 -- Retrive the companies with 100% laid off rate
 With highest_percentage AS
 (
-SELECT company, industry, country, percentage_laid_off, percentage_laid_off * 100 as '%'
+SELECT company, industry, country, percentage_laid_off
 FROM layoffs_staging2
 Where percentage_laid_off is not null
-ORDER BY 4 DESC
+ORDER BY 3
 )
 SELECT *
 FROM highest_percentage
